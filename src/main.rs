@@ -1,7 +1,7 @@
 use chrono::{Duration, NaiveDate, Utc};
 use eval::eval;
 use slint::{Model, SharedString, VecModel};
-use std::{ collections::BTreeMap, ops::Range, rc::Rc, thread};
+use std::{ collections::BTreeMap, ops::Range, ptr, rc::Rc, thread};
 use anyhow::{Result, Error};
 use rand::Rng;
 
@@ -230,9 +230,7 @@ fn serial(ui: &AppWindow,
                         break;
                     }
                     let op = gen_op();
-                    let mut expr_tmp = expr.clone();
-                    expr_tmp.push_str(op.as_str());
-                    expr_tmp.push_str(format!("{}",n).as_str());
+                    let expr_tmp = format!("{}{}{}", expr, op, n);
                     let result = eval(&expr_tmp).unwrap().as_i64().unwrap() as i32;
 
                     if result >= 0 && result <= limit {
@@ -253,16 +251,20 @@ fn serial(ui: &AppWindow,
         Ok(())
 }
 
+// Generate a random number between `start` and `end` (inclusive).
+// Returns the generated number.
 fn gen_rand(start: i32, end: i32) -> i32 {
     let mut rng = rand::thread_rng();
     rng.gen_range(Range{start, end})
 }
 
+// Generate an arithmetic operator based on a random number.
+// Returns the generated operator as a string.
 fn gen_op() -> String {
     let n = gen_rand(0, 100);
     if n % 2 == 0 {
-        "+".to_string()
+        "+".to_string() // If the number is even, return "+"
     } else {
-        "-".to_string()
+        "-".to_string() // If the number is odd, return "-"
     }
 }

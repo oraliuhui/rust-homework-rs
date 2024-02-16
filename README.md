@@ -5,10 +5,13 @@
 连加连减20道
 ***
 
-## 技术
+# 技术
 - rust
 - slint
 - simple_excel_writer
 - rand
 - anyhow
 - eval
+
+# 截图
+![image](https://github.com/oraliuhui/rust-homework-rs/assets/12724500/4f94827f-aa98-4fbf-9878-0ced3da06442)

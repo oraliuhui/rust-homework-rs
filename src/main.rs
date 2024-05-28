@@ -1,7 +1,7 @@
 use chrono::{Duration, NaiveDate, Utc};
 use eval::eval;
 use slint::{Model, SharedString, VecModel};
-use std::{ collections::BTreeMap, ops::Range, ptr, rc::Rc, thread};
+use std::{ collections::BTreeMap, ops::Range, rc::Rc, thread};
 use anyhow::{Result, Error};
 use rand::Rng;
 
@@ -14,6 +14,7 @@ extern crate eval;
 slint::include_modules!();
 
 const DATE_FORMATTER: &str =  "%Y-%m-%d";
+const COL_WIDTH: f32 = 16.0;
 
 fn main() -> Result<(), slint::PlatformError> {
     let ui = AppWindow::new()?;
@@ -69,11 +70,11 @@ fn main() -> Result<(), slint::PlatformError> {
             let mut wb = Workbook::create(format!("D:/口算{}_{}_{}.xlsx", start_date, end_date, file_name).as_str());
             let mut sheet = wb.create_sheet("SheetName");
             
-            sheet.add_column(Column{width: 18.0});
-            sheet.add_column(Column{width: 18.0});
-            sheet.add_column(Column{width: 18.0});
-            sheet.add_column(Column{width: 18.0});
-            sheet.add_column(Column{width: 18.0});
+            sheet.add_column(Column{width: COL_WIDTH});
+            sheet.add_column(Column{width: COL_WIDTH});
+            sheet.add_column(Column{width: COL_WIDTH});
+            sheet.add_column(Column{width: COL_WIDTH});
+            sheet.add_column(Column{width: COL_WIDTH});
 
             wb.write_sheet(&mut sheet, |sheet_writer| {
                 let sw = sheet_writer;

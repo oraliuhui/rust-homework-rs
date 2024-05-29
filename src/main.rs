@@ -4,6 +4,7 @@ use slint::{Model, SharedString, VecModel};
 use std::{ collections::BTreeMap, ops::Range, rc::Rc, thread};
 use anyhow::{Result, Error};
 use rand::Rng;
+use rand::seq::SliceRandom;
 
 extern crate simple_excel_writer as excel;
 
@@ -34,6 +35,7 @@ fn main() -> Result<(), slint::PlatformError> {
 
     {
         let ui_handler = ui.as_weak();
+
         ui.on_generate(move || {
             let ui = ui_handler.unwrap();
             
@@ -60,6 +62,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 ui.set_notify(format!("{} 完成普通计算", day).into());
                 carry(&ui, &mut map, &day).expect("进位加生成出错");
                 ui.set_notify(format!("{} 完成进位加", day).into());
+                back(&ui, &mut map, &day).expect("完成退位减法出错");
+                ui.set_notify(format!("{} 完成退位减", day).into());
                 serial(&ui, &mut map, &day).expect("连加连减生成出错");
                 ui.set_notify(format!("{} 完成连加连减", day).into());
             }
@@ -76,6 +80,8 @@ fn main() -> Result<(), slint::PlatformError> {
             sheet.add_column(Column{width: COL_WIDTH});
             sheet.add_column(Column{width: COL_WIDTH});
 
+            println!("是否打乱顺序: {}", ui.get_out_order());
+
             wb.write_sheet(&mut sheet, |sheet_writer| {
                 let sw = sheet_writer;
                 for day in map.keys().into_iter() {
@@ -86,13 +92,24 @@ fn main() -> Result<(), slint::PlatformError> {
                     sw.append_row(row![day.as_ref()])?;
                     let arr = map.get(day).unwrap();
                     
-                    for i in (0..arr.len()).step_by(5) {
+                     let mut ss: Vec<String> = Vec::new();
+                    if ui.get_out_order() {
+                        for i  in 0..arr.len() {
+                            ss.push(arr[i].clone());
+                        }
+                    }
+
+                    if ui.get_out_order() {
+                        let _ = &ss.shuffle(&mut rand::thread_rng());
+                    }
+
+                    for i in (0..ss.len()).step_by(5) {
                         let mut row = Row::new();
                         for j in 0..5 {
-                            if i+j > arr.len() - 1 {
+                            if i+j > ss.len() - 1 {
                                 break;
                             }
-                            row.add_cell(format!("{}{}", arr[i+j], "="));
+                            row.add_cell(format!("{}{}", ss[i+j], "="));
                         }
                         sw.append_row(row)?;
                     }
@@ -134,6 +151,7 @@ fn common(ui: &AppWindow,
     let total = ui.get_common_total();
     let min = ui.get_common_min();
     let max = ui.get_common_max();
+    let common_limit = ui.get_common_limit();
 
     if !map.contains_key(day) {
         map.insert(day.to_string(), vec![]);
@@ -152,11 +170,14 @@ fn common(ui: &AppWindow,
             }
 
             let equation = format!("{}{}{}", first, op, second);
-            if !map[day].contains(&equation) {
-                 println!("{}", equation);
-                map.get_mut(day).unwrap().push(equation);
-                break;
+            let result = eval(&equation).unwrap().as_i64().unwrap() as i32;
+            if result <= common_limit {
+                if !map[day].contains(&equation) {
+                    map.get_mut(day).unwrap().push(equation);
+                    break;
+                }
             }
+            
             thread::sleep(std::time::Duration::from_millis(10));
         }
     }
@@ -172,6 +193,7 @@ fn carry(ui: &AppWindow,
         let max_1 = ui.get_carry_max_1();
         let min_2 = ui.get_carry_min_2();
         let max_2 = ui.get_carry_max_2();
+        let carry_limit = ui.get_carry_limit();
 
         if !map.contains_key(day) {
             map.insert(day.to_string(), vec![]);
@@ -188,8 +210,9 @@ fn carry(ui: &AppWindow,
                     first = second;
                     second = tmp;
                 }
-
-                if first%10 + second%10 >= 10 {
+                
+                // println!("{} + {} = {}", first, second, first + second);
+                if first%10 + second%10 >= 10 && first + second < carry_limit {
                     let equation = format!("{}{}{}", first, op, second);
                     if !map[day].contains(&equation) {
                         println!("{}", equation);
@@ -203,6 +226,47 @@ fn carry(ui: &AppWindow,
         }
 
         Ok(())
+}
+
+/// 退位减法
+fn back(ui: &AppWindow, map: &mut BTreeMap<String, Vec<String>>, day: &str) -> Result<(), Error> {
+    let total = ui.get_back_total();
+        let min_1 = ui.get_back_min_1();
+        let max_1 = ui.get_back_max_1();
+        let min_2 = ui.get_back_min_2();
+        let max_2 = ui.get_back_max_2();
+        let back_limit = ui.get_back_limit();
+
+        if !map.contains_key(day) {
+            map.insert(day.to_string(), vec![]);
+        }
+
+        for _ in 0..total {
+            loop {
+                let mut first = gen_rand(min_1, max_1);
+                let mut second = gen_rand(min_2, max_2);
+                let op = "-";
+
+                if op == "-" && first < second {
+                    let tmp = first;
+                    first = second;
+                    second = tmp;
+                }
+
+                if first%10 < second%10 && first - second >= back_limit{
+                    let equation = format!("{}{}{}", first, op, second);
+                    if !map[day].contains(&equation) {
+                        println!("{}", equation);
+                        map.get_mut(day).unwrap().push(equation);
+                        break;
+                    }
+                }
+
+                thread::sleep(std::time::Duration::from_millis(10));
+            }
+        }
+
+    Ok(())
 }
 
 fn serial(ui: &AppWindow, 

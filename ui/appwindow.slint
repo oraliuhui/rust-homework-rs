@@ -1,4 +1,4 @@
-import { Button, VerticalBox , GroupBox, HorizontalBox, TextEdit, LineEdit, ScrollView, SpinBox} from "std-widgets.slint";
+import { Button, VerticalBox , GroupBox, HorizontalBox, TextEdit, LineEdit, ScrollView, SpinBox, CheckBox} from "std-widgets.slint";
 
 export struct Serial {
     min: int,
@@ -12,19 +12,34 @@ export component AppWindow inherits Window {
     preferred-width: 1000px;
     preferred-height: 800px;
 
+    // 作业时间
     in-out property <string> start_date;
     in-out property <string> end_date;
+    in-out property <bool> out_order;
 
+    // 普通加减
     in-out property <int> common_total: 20;
     in-out property <int> common_min: 0;
     in-out property <int> common_max: 10;
+    in-out property <int> common_limit: 20;
 
+    // 进位加法
     in-out property <int> carry_total: 20;
     in-out property <int> carry_min_1: 11;
     in-out property <int> carry_max_1: 19;
     in-out property <int> carry_min_2: 1;
     in-out property <int> carry_max_2: 9;
+    in-out property <int> carry_limit: 30;
 
+    // 退位减法
+    in-out property <int> back_total: 20;
+    in-out property <int> back_min_1: 11;
+    in-out property <int> back_max_1: 19;
+    in-out property <int> back_min_2: 1;
+    in-out property <int> back_max_2: 9;
+    in-out property <int> back_limit: 0;
+
+    // 连加连减
     in-out property <int> serial_total: 20;
     in-out property <int> serial_num: 3;
     in-out property <int> serial_limit: 20;
@@ -44,47 +59,77 @@ export component AppWindow inherits Window {
             GroupBox { 
                 title: "基础设置";
                 HorizontalBox { 
+                    max-height: 20px;
                     Text {vertical-alignment: center;text: "作业时间";}
                     LineEdit { text: root.start_date; edited(text) => {root.start_date = text;} }
                     Text {vertical-alignment: center;text: "-";}
                     LineEdit { text: root.end_date; edited(text) => {root.end_date = text;} }
+                    CheckBox { text: "打乱顺序"; checked: root.out_order;  toggled() => {root.out_order = self.checked; } }
                 }
             }
             
             GroupBox {
                 title: "普通加减";
+                max-height: 20px;
                 HorizontalBox { 
                     Text {
                         vertical-alignment: center;
                         text: "共";
                     }
                     LineEdit {text: root.common_total; edited(text) => {root.common_total = text.to-float();}}
-                    Text {vertical-alignment: center; text: "道 从";}
+                    Text {vertical-alignment: center; text: "道，从";}
                     LineEdit {text: root.common_min; edited(text) => {root.common_min = text.to-float();}}
                     Text {vertical-alignment: center; text: "到";}
                     LineEdit {text: root.common_max; edited(text) => {root.common_max = text.to-float();}}
+                    Text {vertical-alignment: center; text: "，结果小于";}
+                    LineEdit {text: root.common_limit; edited(text) => {root.common_limit = text.to-float();}}
                 }
             }
 
             GroupBox {
                 title: "进位加法";
+                max-height: 40px;
                 VerticalBox {
                     HorizontalBox {
                         Text {vertical-alignment: center; text: "共";}
                         LineEdit {text: root.carry_total; edited(text) => {root.carry_total = text.to-float();}}
-                        Text {vertical-alignment: center; text: "道";}
+                        Text {vertical-alignment: center; text: "道，结果不超过";}
+                        LineEdit {text: root.carry_limit; edited(text) => {root.carry_limit = text.to-float();}}
                     }
                     HorizontalBox { 
                         Text {vertical-alignment: center; text: "加数一从";}
                         LineEdit {text: root.carry_min_1; edited(text) => {root.carry_min_1 = text.to-float();}}
                         Text {vertical-alignment: center; text: "到";}
                         LineEdit {text: root.carry_max_1; edited(text) => {root.carry_max_1 = text.to-float();}}
-                    }
-                    HorizontalBox { 
-                        Text {vertical-alignment: center; text: "加数二从";}
+
+                        Text {vertical-alignment: center; text: "， 加数二从";}
                         LineEdit {text: root.carry_min_2; edited(text) => {root.carry_min_2 = text.to-float();}}
                         Text {vertical-alignment: center; text: "到";}
                         LineEdit {text: root.carry_max_2; edited(text) => {root.carry_max_2 = text.to-float();}}
+                    }
+                }
+            }
+
+            GroupBox {
+                title: "退位减法";
+                max-height: 40px;
+                VerticalBox {
+                    HorizontalBox {
+                        Text {vertical-alignment: center; text: "共";}
+                        LineEdit {text: root.back_total; edited(text) => {root.back_total = text.to-float();}}
+                        Text {vertical-alignment: center; text: "道，结果不小于";}
+                        LineEdit {text: root.back_limit; edited(text) => {root.back_limit = text.to-float();}}
+                    }
+                    HorizontalBox { 
+                        Text {vertical-alignment: center; text: "被减数从";}
+                        LineEdit {text: root.back_min_1; edited(text) => {root.back_min_1 = text.to-float();}}
+                        Text {vertical-alignment: center; text: "到";}
+                        LineEdit {text: root.back_max_1; edited(text) => {root.back_max_1 = text.to-float();}}
+
+                        Text {vertical-alignment: center; text: "， 减数从  ";}
+                        LineEdit {text: root.back_min_2; edited(text) => {root.back_min_2 = text.to-float();}}
+                        Text {vertical-alignment: center; text: "到";}
+                        LineEdit {text: root.back_max_2; edited(text) => {root.back_max_2 = text.to-float();}}
                     }
                 }
             }
@@ -94,7 +139,7 @@ export component AppWindow inherits Window {
                 serial_box := VerticalBox {
                     HorizontalBox {
                         Text {vertical-alignment: center; text: "共";}
-                        LineEdit {text: root.serial_total; edited(text) => {root.serial_total = text.to-float();}}
+                        LineEdit {max-height: 20px; text: root.serial_total; edited(text) => {root.serial_total = text.to-float();}}
                         Text {vertical-alignment: center; text: "道";}
                         SpinBox {value: root.serial_num; edited => {root.serial_num_changed(self.value)}}
                         Text {vertical-alignment: center; text: "位数字 结果不超过";}
